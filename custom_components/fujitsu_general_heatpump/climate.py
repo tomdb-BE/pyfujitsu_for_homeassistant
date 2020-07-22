@@ -106,6 +106,7 @@ class FujitsuClimate(ClimateEntity):
         self._name = self.name
         _LOGGER.debug("FujitsuClimate name set: %s", self._name)
         self._aux_heat = self.is_aux_heat_on
+        self._current_temperature = self.current_temperature
         self._target_temperature = self.target_temperature
         self._fan_mode = self.fan_mode
         self._hvac_mode = self.hvac_mode
@@ -133,7 +134,13 @@ class FujitsuClimate(ClimateEntity):
            return True
         else:
            return False
-            
+    
+    @property
+    def current_temperature(self):
+        """Return the current temperature in degrees Celcius."""
+        curtemp = self._fujitsu_device._get_prop_from_json('display_temperature', self._fujitsu_device._properties)
+        return round((curtemp['value'] / 100 - 32) * 5/9, 1)
+        
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
