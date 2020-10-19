@@ -4,7 +4,8 @@ Support for the Fujitsu General Split A/C Wifi platform AKA FGLair .
 
 import logging
 import voluptuous as vol
-import pyfujitseu
+from pyfujitseu.api import Api as fgapi
+from pyfujitseu.splitAC import splitAC
 
 from homeassistant.components.climate import ClimateEntity, PLATFORM_SCHEMA
 from homeassistant.components.climate.const import (
@@ -37,13 +38,17 @@ _LOGGER = logging.getLogger(__name__)
 MIN_TEMP = 16
 MAX_TEMP = 30
 
+DEFAULT_PATH = 'token.txt'
+DEFAULT_UNIT = 'C'
+
 SUPPORT_FLAGS = SUPPORT_FAN_MODE | SUPPORT_SWING_MODE | SUPPORT_TARGET_TEMPERATURE
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_USERNAME): cv.string,
     vol.Required(CONF_PASSWORD): cv.string,
     vol.Optional('region'): cv.string,
-    vol.Optional('tokenpath'): cv.string,
+    vol.Optional('unit', default=DEFAULT_UNIT): cv.string,
+    vol.Optional('tokenpath', default=DEFAULT_PATH): cv.string,
 
 })
 
@@ -69,17 +74,16 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     """Setup the E-Thermostaat Platform."""
     
     _LOGGER.debug("FujitsuClimate setup_platform called")
-    import pyfujitseu.api as fgapi
     _LOGGER.debug("FujitsuClimate setup_platform called")
     
-    _LOGGER.debug("FujitsuClimate pyfujitseu.api import called")    
     username = config.get(CONF_USERNAME)
     password = config.get(CONF_PASSWORD)
     region = config.get('region')
+    unit = config.get('unit')
     tokenpath = config.get('tokenpath')
     _LOGGER.debug("FujitsuClimate config.get ")
     
-    fglairapi = fgapi.Api(username, password, region, tokenpath)
+    fglairapi = fgapi(username, password, region, tokenpath)
     if not fglairapi._authenticate():
         _LOGGER.error("Unable to authenticate with Fujistsu General")
         return
@@ -87,22 +91,22 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     _LOGGER.debug("FujitsuClimate fglairapi._authenticate ")    
     
     devices = fglairapi.get_devices_dsn()
-    add_entities(FujitsuClimate(fglairapi, dsn, region) for dsn in devices)
+    add_entities(FujitsuClimate(fglairapi, dsn, region, unit) for dsn in devices)
     _LOGGER.debug("FujitsuClimate setup_platform fine")
 
 
 class FujitsuClimate(ClimateEntity):
     """Representation of a E-Thermostaat device."""
 
-    def __init__(self, api, dsn, region):
+    def __init__(self, api, dsn, region, unit):
         """Initialize the thermostat."""
         _LOGGER.debug("FujitsuClimate init called for dsn: %s", dsn)
-        import pyfujitseu.splitAC as splitAC
         _LOGGER.debug("FujitsuClimate pyfujitseu.splitAC called")
         self._api = api
         self._dsn = dsn
         self._region = region 
-        self._fujitsu_device = splitAC.splitAC(self._dsn, self._api)
+        self._unit = unit 
+        self._fujitsu_device = splitAC(self._dsn, self._api)
         _LOGGER.debug("FujitsuClimate _fujitsu_device setup.")        
         self._name = self.name
         _LOGGER.debug("FujitsuClimate name set: %s", self._name)
@@ -140,10 +144,10 @@ class FujitsuClimate(ClimateEntity):
     def current_temperature(self):
         """Return the current temperature in degrees Celcius."""
         curtemp = self._fujitsu_device._get_prop_from_json('display_temperature', self._fujitsu_device._properties)
-        if self._region == 'us':
-           return round(curtemp['value'] / 100, 1)
-        else:
+        if self._unit == 'C':
            return round((curtemp['value'] / 100 - 32) * 5/9, 1)
+        else:
+           return round(curtemp['value'] / 100, 1)
  
     @property
     def target_temperature(self):
