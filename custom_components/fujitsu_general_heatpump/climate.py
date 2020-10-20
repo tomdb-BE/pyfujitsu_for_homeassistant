@@ -157,7 +157,10 @@ class FujitsuClimate(ClimateEntity):
     @property
     def target_temperature_step(self):
         """Return the supported step of target temperature."""
-        return 1
+        if self._unit == 'C':
+            return 0.5
+        else:
+            return 1
     
    
     @property
