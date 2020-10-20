@@ -24,6 +24,7 @@ climate:
      username: <your FGLair username>
      password: <your FGLair password> 
      region: [eu, cn, us] (optional, default: us)
+     unit: [C,F] (optional, default: C)
      tokenpath: (optional, default: 'token.txt')       
 ```
 
@@ -34,6 +35,7 @@ climate:
     username: !secret FGLAIR_USER
     password: !secret FGLAIR_PASS
     region: 'eu'
+    unit: F
     tokenpath: 'token.txt'
 ```
 
